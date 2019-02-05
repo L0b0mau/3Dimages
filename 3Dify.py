@@ -6,8 +6,8 @@ import time
 
 #####init
 
-path = '/media/lobo/Todesstern/PrivateProjekte/3DImages/CVPP.PNG'
-subdir = 'cvpp' # subdir to save images
+path = 'pathtopic/picname.extension'
+subdir = 'yoursubdir' # subdir to save images
 substeps= 10 #how many images do you want?
 horRot = 10 #how many degrees horizontal rotation per step
 verRot = 90/substeps #how many degrees vertical rotation per step
