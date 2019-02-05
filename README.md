@@ -1,5 +1,5 @@
 # 3Dimages
-Small Python script to render your greyscale images into 3D plots
+This is a small Python script to render your images into 3D plots
 
 you can either show it as 3D scatterplot and manipulate it with your mouse, or if your PC is as slow as mine, just let the function run and render/save the various perspectives for you.
 
