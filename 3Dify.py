@@ -4,6 +4,15 @@ import numpy as np
 import matplotlib.image as mpimg
 import time
 
+#####init
+
+path = '/media/lobo/Todesstern/PrivateProjekte/3DImages/CVPP.PNG'
+subdir = 'cvpp' # subdir to save images
+substeps= 10 #how many images do you want?
+horRot = 10 #how many degrees horizontal rotation per step
+verRot = 90/substeps #how many degrees vertical rotation per step
+
+####endinit
 
 def translate(value, leftMin, leftMax, rightMin, rightMax):
     #Maps values from one range to another
@@ -16,9 +25,6 @@ def translate(value, leftMin, leftMax, rightMin, rightMax):
 
     # Convert the 0-1 range into a value in the right range.
     return rightMin + (valueScaled * rightSpan)
-
-path = 'yourpath/imagename.extension'
-subdir = 'subdirectory/for/your/output'
 
 img1=mpimg.imread(path)
 f = plt.figure(100)
@@ -57,20 +63,14 @@ x, y = img.shape
 x_axis = np.arange(x)
 y_axis = np.arange(y)
 
-
 #since rotating by hand takes so long, this function will save you an image at various angles and save it to your specified subdirectory
-
-substeps= 15 #how many images do you want?
 
 for step in range(substeps):
 
-    fig = plt.figure(step) # this results in all $substeps amount of images will open and close after the script finished. To avoid this, just name all figures 1, but then you will render one image on top of the other and you will see the axis labels as artifacts on the sides
+    fig = plt.figure(step)
     ax = fig.add_subplot(111, projection='3d')
-
     column1 = img[:, [0]]
-
     colormap = np.empty(size)
-
     xs = np.arange(size)
 
     for i in range(size):
@@ -82,7 +82,7 @@ for step in range(substeps):
 
         ax.scatter(xs, ys, zs, zdir='z', s=20, c=colormap, marker='$.$', depthshade=True)
 
-    ax.view_init(azim=(step*10), elev=90-(step*(90/substeps)))
+    ax.view_init(azim=(step*horRot), elev=90-(step*verRot))
     ax.set_xlabel('Image Height')
     ax.set_ylabel('Image Width')
     ax.set_zlabel('Pixel Brightness')
@@ -95,5 +95,4 @@ for step in range(substeps):
     # plt.show()
 
 end = time.time()
-
 print("Done in " + str(end - start) + " seconds")
