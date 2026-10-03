@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 import rasterio
 import requests
+import rasterio.errors
 import rasterio.windows
 from scipy.ndimage import distance_transform_edt, map_coordinates
 
@@ -105,7 +106,12 @@ class DemSampler:
                 continue
             with rasterio.open(p) as src:
                 win = rasterio.windows.from_bounds(*b, transform=src.transform).round_offsets().round_lengths()
-                win = win.intersection(rasterio.windows.Window(0, 0, src.width, src.height))
+                try:
+                    win = win.intersection(rasterio.windows.Window(0, 0, src.width, src.height))
+                except rasterio.errors.WindowError:
+                    continue  # Kachel berührt den Puffer nur auf der Kante
+                if win.width < 1 or win.height < 1:
+                    continue
                 arr = src.read(1, window=win).astype("float32")
                 tr = src.window_transform(win)
                 nod = src.nodata

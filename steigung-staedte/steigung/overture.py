@@ -28,7 +28,7 @@ _FS = None
 def filesystem() -> pfs.S3FileSystem:
     global _FS
     if _FS is None:
-        kw = dict(anonymous=True, region=config.OVERTURE_REGION)
+        kw = dict(anonymous=True, region=config.OVERTURE_REGION, connect_timeout=30, request_timeout=120)
         proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
         if proxy:
             kw["proxy_options"] = proxy
@@ -121,7 +121,7 @@ def fetch_named_divisions(country: str, names: list[str], tag: str) -> tuple[gpd
     """Divisions + Grenzflächen für eine feste Namensliste (z. B. österreichische Landeshauptstädte)."""
     cache_div = config.CACHE / f"divisions_{tag}.parquet"
     cache_area = config.CACHE / f"division_areas_{tag}.parquet"
-    subtypes = ["locality", "county", "region"]
+    subtypes = ["locality", "localadmin", "county", "region"]
 
     def load(typ, cols, path):
         if not path.exists():

@@ -48,6 +48,9 @@ METHODIK = {
     "oesterreich": "Zum Vergleich die neun österreichischen Landeshauptstädte (Wien zugleich Bundeshauptstadt), "
                    "gleiche Methode und Datenquellen. Grenzen: Statutarstädte = county, Bregenz = locality, Wien = region. "
                    "Sie erhalten keinen Rang im deutschen Ranking, nur einen Gesamtrang.",
+    "schweiz": "Zum Vergleich die zehn größten Schweizer Städte (nur sechs davon > 100.000 EW): Zürich, Genf, Basel, "
+               "Lausanne, Bern, Winterthur, Luzern, St. Gallen, Lugano, Biel/Bienne. Grenze = politische Gemeinde "
+               "(OSM localadmin). Gleiche Methode, nur Gesamtrang.",
     "steilste_strecke": "Zusammenhängende Kantenfolge gleichen Straßennamens, 100–800 m, maximale Netto-Steigung. "
                         "Konservativ: Minimum aus Copernicus und SRTM, Richtung muss übereinstimmen.",
 }
@@ -65,10 +68,13 @@ GRENZEN = [
     "0,2 Hm/km auseinander, mit SRTM dreht sich die Reihenfolge der ersten drei. Robust ist die Gruppe, nicht der Platz.",
     "Nur Knotenhöhen: Kuppen und Senken zwischen zwei Kreuzungen werden nicht erfasst (Unterschätzung bei langen Kanten).",
     "Straßen, die unter Brücken hindurchführen, können im DSM die Brückenhöhe erhalten (nicht korrigiert).",
-    "Einwohnerzahlen stammen aus OSM (gemischte Stichtage), nicht direkt aus Destatis bzw. Statistik Austria.",
+    "Einwohnerzahlen stammen aus OSM (gemischte Stichtage), nicht direkt aus Destatis, Statistik Austria bzw. BFS.",
     "Längen werden für alle Städte in UTM 32N gerechnet. Für Ostösterreich (Wien, Graz) liegt der Maßstabsfehler "
     "dadurch bei ca. 0,3–0,4 %; Steigungen ändern sich um denselben relativen Betrag (vernachlässigbar).",
-    "Stadtgebiet = Verwaltungsgrenze. Große Waldflächen/ländliche Ortsteile verändern das Ergebnis je nach Zuschnitt.",
+    "Stadtgebiet = Verwaltungsgrenze. Große Waldflächen/ländliche Ortsteile verändern das Ergebnis je nach Zuschnitt. "
+    "Extremfall Lugano: Durch Gemeindefusionen (2004–2013) gehören Bergdörfer bis ins Val Colla zur Stadt.",
+    "Dichte Altstädte mit hohen Häuserzeilen (z. B. Genf, 18 km² fast vollständig bebaut) bekommen im DSM mehr "
+    "Gebäuderauschen als locker bebaute Städte; Genf liegt mit SRTM bei 16,4 statt 18,7 Hm/km.",
 ]
 
 
@@ -131,7 +137,8 @@ def write_results(cities: pd.DataFrame, store: dict, failed: dict):
         "flachste_grossstadt": brief(flat.iloc[0]),
         "ranking_hm_pro_km": de.sort_values("rang_hm_pro_km")["stadt"].tolist(),
         "ranking_anteil_6pct": de.sort_values("rang_anteil_6pct")["stadt"].tolist(),
-        "oesterreich": [brief(r) for _, r in df[~is_de].sort_values("hm_pro_km", ascending=False).iterrows()],
+        "oesterreich": [brief(r) for _, r in df[df.land == "AT"].sort_values("hm_pro_km", ascending=False).iterrows()],
+        "schweiz": [brief(r) for _, r in df[df.land == "CH"].sort_values("hm_pro_km", ascending=False).iterrows()],
         "ranking_gesamt_hm_pro_km": df.sort_values("hm_pro_km", ascending=False)["stadt"].tolist(),
         "ranking_vergleich": {
             "spearman_hm_vs_anteil6": round(rho_rank, 3),
@@ -140,7 +147,9 @@ def write_results(cities: pd.DataFrame, store: dict, failed: dict):
         "dem_vergleich": {"spearman_hm_pro_km_cop30_vs_srtm": round(rho_dem, 3)},
         "fehlgeschlagen": {k: v.splitlines()[0] for k, v in failed.items()},
         "anzahl_staedte": int(is_de.sum()),
-        "anzahl_staedte_at": int((~is_de).sum()),
+        "anzahl_staedte_at": int((df.land == "AT").sum()),
+        "anzahl_staedte_ch": int((df.land == "CH").sum()),
+        "anzahl_staedte_gesamt": int(len(df)),
     }
     (config.RESULTS / "top_staedte.json").write_text(json.dumps(res, ensure_ascii=False, indent=2, default=str))
     log.info("Top 3: %s | flachste: %s", ", ".join(top3.stadt), flat.stadt.iloc[0])

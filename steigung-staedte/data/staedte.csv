@@ -93,3 +93,13 @@ Klagenfurt,Klagenfurt,AT-2,100316,,Landeshauptstadt AT,Q41753,a3a9d7f7-c199-44ff
 St. Pölten,St. Pölten,AT-3,59767,,Landeshauptstadt AT,Q82500,fa3ebceb-e1c2-4f80-9767-2fec3a3679ad,county,109.1,AT
 Bregenz,Bregenz,AT-8,29620,,Landeshauptstadt AT,Q1737,4f7a05be-3078-43f8-b672-635d6ac52b51,locality,29.7,AT
 Eisenstadt,Eisenstadt,AT-1,9243,,Landeshauptstadt AT,Q126321,9458dec4-9125-4ee8-b977-49a508fef6e5,county,43.2,AT
+Zürich,Zürich,CH-ZH,443037,,Großstadt CH (Top 10),Q72,ca71a8ff-b812-4054-b837-0570c16b8b51,localadmin,91.8,CH
+Genf,Genève,CH-GE,191557,,Großstadt CH (Top 10),Q71,6cab781b-4f18-47b1-b38d-8f30d9ae331e,localadmin,18.3,CH
+Basel,Basel,CH-BS,174491,,Großstadt CH (Top 10),Q78,9d8fc035-184f-473f-8e25-ec979c69f7b3,localadmin,23.8,CH
+Lausanne,Lausanne,CH-VD,133521,,Großstadt CH (Top 10),Q807,4f856cc5-2078-42b2-b84d-08f4ccca9672,localadmin,67.6,CH
+Bern,Bern,CH-BE,128848,,Großstadt CH (Top 10),Q70,81172041-2d6c-4816-9e20-d28b1039e64c,localadmin,51.6,CH
+Winterthur,Winterthur,CH-ZH,108044,,Großstadt CH (Top 10),Q9125,8ea7442d-7dbb-417b-b7b4-9abd6266d952,localadmin,68.0,CH
+Luzern,Luzern,CH-LU,86234,,Großstadt CH (Top 10),Q4191,1f79054b-f776-4036-b9f9-d57f3d7736b3,localadmin,37.4,CH
+St. Gallen,St. Gallen,CH-SG,78213,,Großstadt CH (Top 10),Q25607,01c4b12b-3253-47c3-b641-5020249cb003,localadmin,39.3,CH
+Lugano,Lugano,CH-TI,67000,,Großstadt CH (Top 10),Q7024,79e6ffad-25ac-421e-8dc7-ec031ccb2e24,localadmin,86.1,CH
+Biel/Bienne,Biel/Bienne,CH-BE,56378,,Großstadt CH (Top 10),Q1034,f552a007-b471-4a28-91db-c896050fd07c,localadmin,21.2,CH

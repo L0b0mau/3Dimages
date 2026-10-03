@@ -140,11 +140,13 @@ def build_html():
     sel = [r["stadt"] for r in top["top3_hm_pro_km"]] + [top["flachste_grossstadt"]["stadt"]]
     roles = ["top"] * 3 + ["ref"]
     # Österreich: steilste Landeshauptstadt, außerdem Innsbruck (Alpenstadt, häufigste Vergleichsfrage)
-    at = [r["stadt"] for r in top.get("oesterreich", [])]
-    for c in ([at[0]] if at else []) + (["Innsbruck"] if "Innsbruck" in at else []):
-        if c not in sel:
-            sel.append(c)
-            roles.append("at")
+    # Vergleichsländer: jeweils die steilste Stadt, für Österreich außerdem Innsbruck (Alpenstadt)
+    for key, cc, extra in (("oesterreich", "AT", "Innsbruck"), ("schweiz", "CH", None)):
+        lst = [r["stadt"] for r in top.get(key, [])]
+        for c in ([lst[0]] if lst else []) + ([extra] if extra in lst else []):
+            if c not in sel:
+                sel.append(c)
+                roles.append(cc)
     payload = []
     for c in sel:
         crow = {**store[c], **df[df.stadt == c].iloc[0].to_dict()}
@@ -161,7 +163,8 @@ def build_html():
         "bins": config.GRADE_BINS, "meta": {k: top[k] for k in ("stand", "overture_release", "methodik",
                                                                    "bekannte_grenzen", "ranking_vergleich",
                                                                    "dem_vergleich", "anzahl_staedte",
-                                                                   "anzahl_staedte_at")},
+                                                                   "anzahl_staedte_at", "anzahl_staedte_ch",
+                                                                   "anzahl_staedte_gesamt")},
         "validation": val,
     }
     js = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
