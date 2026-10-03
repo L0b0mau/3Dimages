@@ -98,9 +98,11 @@ input[type=range]{accent-color:var(--magenta);width:140px}
 .switch{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-family:var(--font-mono);font-size:var(--step--1);padding:7px 12px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
 .switch[aria-pressed="true"]{border-color:var(--magenta);color:var(--magenta);box-shadow:0 0 .6rem color-mix(in srgb,var(--magenta) 35%,transparent)}
 .switch:hover{border-color:var(--cyan)}
-#mixwrap[hidden]{display:none!important}
-.mixlabels{display:flex;gap:8px;align-items:center}
-.mixlabels span:first-child{color:var(--amber)} .mixlabels span:last-child{color:var(--cyan)}
+.citylabel{position:absolute;left:0;top:0;pointer-events:none;font-family:var(--font-display);font-weight:700;font-size:var(--step-0);
+  text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;padding:3px 8px;border:1px solid currentColor;
+  background:color-mix(in srgb,var(--bg) 80%,transparent);transform:translate(-50%,-130%);will-change:transform}
+.citylabel small{display:block;font-family:var(--font-mono);font-weight:400;font-size:var(--step--1);letter-spacing:0;text-transform:none;color:var(--fg)}
+.citylabel.a{color:var(--amber)} .citylabel.b{color:var(--cyan)}
 
 /* Kennzahlen */
 .side{display:grid;gap:20px;min-width:0}
@@ -170,12 +172,13 @@ footer{font-family:var(--font-mono);font-size:var(--step--1);color:var(--muted);
       <div id="view" aria-label="3D-Ansicht des Straßennetzes, eingefärbt nach Steigung">
         <div class="hud tl" id="hudtl"></div>
         <div class="hud bottom"><div id="hudbl"></div><div class="legend"><span>Steigung</span><div class="bar"></div><div class="ticks"><span>0</span><span>4</span><span>8</span><span>12</span><span>20 %+</span></div></div></div>
+        <div class="citylabel a" id="lbla" hidden></div>
+        <div class="citylabel b" id="lblb" hidden></div>
         <div id="tip" hidden></div>
       </div>
       <div class="controls">
         <label class="ctl" for="exag">Überhöhung <input type="range" id="exag" min="1" max="8" step="0.5" value="3"><output id="exagout">3×</output></label>
         <button class="switch" id="cmp" aria-pressed="false" type="button">Vergleich mit flachster Stadt</button>
-        <label class="ctl" id="mixwrap" for="mix" hidden><span class="mixlabels"><span id="mixa">A</span><input type="range" id="mix" min="0" max="1" step="0.01" value="0.5"><span id="mixb">B</span></span></label>
         <button class="switch" id="spin" aria-pressed="false" type="button">Rotation</button>
       </div>
     </div>
@@ -4683,7 +4686,8 @@ const gradeColor = d3.scaleLinear().domain(STOPS).range(SCOL).interpolate(d3.int
 
 const cities = DATA.cities;
 const flatIdx = cities.length - 1;
-const state = { cur: 0, compare: false, mix: 0.5, exag: 3, spin: false };
+const state = { cur: 0, compare: false, exag: 3, spin: false };
+const GAP = 1500; /* Abstand zwischen den Städten im Vergleich, in Metern */
 
 /* ---------- Kopf ---------- */
 document.getElementById("stamp").innerHTML =
@@ -4832,9 +4836,9 @@ function setOpacity(g, o) {
 }
 
 let camAnim = null;
-function flyTo(target, dist, dur = 1200) {
+function flyTo(target, dist, dur = 1200, fixedDir = null) {
   const fromT = controls.target.clone(), fromP = camera.position.clone();
-  const dir = fromP.clone().sub(fromT).normalize();
+  const dir = fixedDir ? fixedDir.clone().normalize() : fromP.clone().sub(fromT).normalize();
   if (dir.y < 0.25) { dir.y = 0.45; dir.normalize(); }
   const toP = target.clone().add(dir.multiplyScalar(dist));
   if (reduced) { controls.target.copy(target); camera.position.copy(toP); controls.update(); return; }
@@ -4888,20 +4892,59 @@ function tick(now) {
   if (spot && !reduced) spot[1].material.opacity = (0.2 + 0.25 * (0.5 + 0.5 * Math.sin(now / 400))) * (spot[1].material.userData.k ?? 1);
   controls.autoRotate = state.spin && !reduced;
   controls.update();
+  placeLabels();
   composer.render();
 }
 
+const otherIdx = () => state.cur === flatIdx ? 0 : flatIdx;
+/* Ausdehnung einer Stadt in lokalen Koordinaten (x: Ost, z: -Nord) */
+function bounds(c) { const T = c.terrain; return { x0: T.x0, x1: T.x0 + T.nx * T.step, y0: T.y0, y1: T.y0 + T.ny * T.step }; }
 function applyVisibility() {
   if (!webgl) return;
-  const other = state.cur === flatIdx ? 0 : flatIdx;
+  const other = otherIdx();
   groups.forEach((g, i) => {
-    let o = 0;
-    if (i === state.cur) o = state.compare ? 1 - state.mix : 1;
-    else if (state.compare && i === other) o = state.mix;
-    setOpacity(g, o);
-    if (g.userData.spot) g.userData.spot[1].material.userData.k = o;
+    const on = i === state.cur || (state.compare && i === other);
+    setOpacity(g, on ? 1 : 0);
+    g.position.set(0, 0, 0);
+    if (g.userData.spot) g.userData.spot[1].material.userData.k = on ? 1 : 0;
   });
-  pickTargets = groups.filter((g, i) => g.visible && (i === state.cur ? (!state.compare || state.mix < 0.5) : state.mix >= 0.5)).map(g => g.userData.roads);
+  if (state.compare) {
+    /* links die gewählte Stadt, rechts die Vergleichsstadt */
+    const a = bounds(cities[state.cur]), b = bounds(cities[other]);
+    /* gemeinsame Ausdehnung um den Ursprung zentrieren */
+    const shift = ((a.x1 - a.x0) - (b.x1 - b.x0)) / 2;
+    /* beide Städte in Nord-Süd-Richtung mittig ausrichten (Szene: z = -Nord) */
+    groups[state.cur].position.set(-GAP / 2 - a.x1 + shift, 0, (a.y0 + a.y1) / 2);
+    groups[other].position.set(GAP / 2 - b.x0 + shift, 0, (b.y0 + b.y1) / 2);
+  }
+  pickTargets = groups.filter(g => g.visible).map(g => g.userData.roads);
+}
+/* Kameraabstand, damit alles Sichtbare ins Bild passt */
+function frameDistance() {
+  const c = cities[state.cur], a = bounds(c);
+  let w = a.x1 - a.x0, d = a.y1 - a.y0;
+  if (state.compare) {
+    const b = bounds(cities[otherIdx()]);
+    w += (b.x1 - b.x0) + GAP; d = Math.max(d, b.y1 - b.y0);
+  }
+  const tv = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), th = tv * camera.aspect;
+  /* Breite muss horizontal, Tiefe (schräg gesehen) vertikal ins Bild passen; 12 % Rand */
+  return 1.12 * Math.max((w / 2) / th, (d * 0.5) / tv);
+}
+const lbl = [document.getElementById("lbla"), document.getElementById("lblb")];
+const _v = new THREE.Vector3();
+function placeLabels() {
+  if (!state.compare) { lbl.forEach(l => l.hidden = true); return; }
+  [state.cur, otherIdx()].forEach((ci, k) => {
+    const c = cities[ci], b = bounds(c), g = groups[ci];
+    const maxH = (d3.max(c.terrain.h) - c._base) * state.exag;
+    _v.set((b.x0 + b.x1) / 2, maxH, -b.y1).add(g.position).project(camera);
+    const x = (_v.x + 1) / 2 * view.clientWidth, y = (1 - _v.y) / 2 * view.clientHeight;
+    lbl[k].hidden = _v.z > 1;
+    const half = lbl[k].offsetWidth / 2 + 6;
+    const cx = Math.min(view.clientWidth - half, Math.max(half, x));
+    lbl[k].style.transform = `translate(${cx}px,${Math.max(lbl[k].offsetHeight * 1.3 + 4, y)}px) translate(-50%,-130%)`;
+  });
 }
 
 /* Hover / Klick */
@@ -4935,6 +4978,7 @@ function showTip(p) {
   if (p.x > view.clientWidth - 220) tip.style.transform = "translate(calc(-100% - 12px),12px)"; else tip.style.transform = "";
   tip.hidden = false;
   hoverLine.geometry.dispose(); hoverLine.geometry = new THREE.BufferGeometry().setFromPoints(edgePositions(p.city, p.edge));
+  hoverLine.position.copy(groups[p.city].position);
   hoverLine.visible = true;
 }
 function bindPointer() {
@@ -4952,7 +4996,7 @@ function bindPointer() {
     if (!down || Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) > 4) return;
     const p = pick(ev);
     if (ev.pointerType !== "mouse") { lastPick = p; showTip(p); }
-    if (p) { const pts = edgePositions(p.city, p.edge); const mid = pts[Math.floor(pts.length / 2)].clone(); mid.y *= state.exag; flyTo(mid, 900); state.spin = false; syncSpin(); }
+    if (p) { const pts = edgePositions(p.city, p.edge); const mid = pts[Math.floor(pts.length / 2)].clone(); mid.y *= state.exag; mid.add(groups[p.city].position); flyTo(mid, 900); state.spin = false; syncSpin(); }
   });
 }
 
@@ -5071,7 +5115,7 @@ document.getElementById("spotreplay").onclick = drawProfile;
 document.getElementById("spotfocus").onclick = () => {
   const c = cities[state.cur];
   if (!webgl || !c._spotCenter) return;
-  const t = c._spotCenter.clone(); t.y *= state.exag;
+  const t = c._spotCenter.clone(); t.y *= state.exag; t.add(groups[state.cur].position);
   state.spin = false; syncSpin();
   flyTo(t, 1400);
   view.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
@@ -5154,23 +5198,24 @@ document.getElementById("spin").onclick = () => { state.spin = !state.spin; sync
 document.getElementById("exag").oninput = e => { state.exag = +e.target.value; document.getElementById("exagout").textContent = state.exag + "×"; };
 document.getElementById("cmp").onclick = e => {
   state.compare = !state.compare;
+  if (state.compare) { state.spin = false; syncSpin(); }
   e.currentTarget.setAttribute("aria-pressed", state.compare);
-  document.getElementById("mixwrap").hidden = !state.compare;
-  refresh(false);
+  refresh();
 };
-document.getElementById("mix").oninput = e => { state.mix = +e.target.value; applyVisibility(); };
 
 function refresh(fly = true) {
   const c = cities[state.cur], o = cities[state.cur === flatIdx ? 0 : flatIdx];
   tabs.attr("aria-selected", (d, i) => i === state.cur);
   document.getElementById("cmp").textContent = state.cur === flatIdx ? `Vergleich mit ${cities[0].name}` : `Vergleich mit ${cities[flatIdx].name}`;
-  document.getElementById("mixa").textContent = c.name; document.getElementById("mixb").textContent = o.name;
+  lbl[0].innerHTML = `${c.name}<small>${de(fmt1(c.m.hm_pro_km))} Hm/km</small>`;
+  lbl[1].innerHTML = `${o.name}<small>${de(fmt1(o.m.hm_pro_km))} Hm/km</small>`;
   document.getElementById("viewtitle").textContent = state.compare ? `${c.name} ⇄ ${o.name}` : `Relief · ${c.name}`;
   document.getElementById("hudtl").innerHTML = `<b>${c.name}</b><br>${fmt0(c.m.strassen_km)} km Straßennetz<br>${fmt0(c.m.einwohner_osm)} EW (OSM)` +
-    (state.compare ? `<br><span style="color:var(--cyan)">⇄ ${o.name}, gleiche Skala</span>` : "");
+    (state.compare ? `<br><span style="color:var(--cyan)">rechts: ${o.name}, gleiche Skala und Überhöhung</span>` : "");
   document.getElementById("hudbl").textContent = `Höhe relativ zum Stadttiefpunkt · ${c.edges.g.length.toLocaleString("de-DE")} Kanten`;
   applyVisibility(); updateKpis(); updateHist();
-  if (fly && webgl) flyTo(new THREE.Vector3(0, 0, 0), c._ext * 0.95);
+  /* Vergleich immer von Süden, damit beide Städte nebeneinander stehen */
+  if (fly && webgl) flyTo(new THREE.Vector3(0, 0, 0), frameDistance(), 1200, state.compare ? new THREE.Vector3(0, 0.5, 1) : null);
 }
 function select(i) { if (i === state.cur) return; state.cur = i; refresh(); drawProfile(); }
 document.getElementById("tabs").addEventListener("keydown", e => {
@@ -5180,7 +5225,7 @@ document.getElementById("tabs").addEventListener("keydown", e => {
 });
 
 init3d();
-if (webgl) { const c = cities[0]; camera.position.set(0, c._ext * 0.36, c._ext * 0.78); controls.target.set(0, 0, 0); }
+if (webgl) { const dist = frameDistance(); camera.position.set(0, dist * 0.42, dist * 0.91); controls.target.set(0, 0, 0); }
 refresh(false);
 drawProfile();
 drawRank();
