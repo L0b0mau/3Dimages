@@ -115,3 +115,25 @@ def fetch_city_candidates() -> tuple[pd.DataFrame, gpd.GeoDataFrame]:
     areas = gpd.GeoDataFrame(tb.drop(["geometry"]).to_pandas(),
                              geometry=gpd.GeoSeries.from_wkb(tb["geometry"].to_numpy(zero_copy_only=False)), crs=4326)
     return div, areas
+
+
+def fetch_named_divisions(country: str, names: list[str], tag: str) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    """Divisions + Grenzflächen für eine feste Namensliste (z. B. österreichische Landeshauptstädte)."""
+    cache_div = config.CACHE / f"divisions_{tag}.parquet"
+    cache_area = config.CACHE / f"division_areas_{tag}.parquet"
+    subtypes = ["locality", "county", "region"]
+
+    def load(typ, cols, path):
+        if not path.exists():
+            flt = (pc.field("country") == country) & pc.field("subtype").isin(subtypes)
+            tb = _retry(lambda: dataset("divisions", typ).to_table(filter=flt, columns=cols))
+            tb = tb.append_column("name", pc.struct_field(tb["names"], "primary")).drop(["names"])
+            pq.write_table(tb, path)
+        tb = pq.read_table(path)
+        return gpd.GeoDataFrame(tb.drop(["geometry"]).to_pandas(),
+                                geometry=gpd.GeoSeries.from_wkb(tb["geometry"].to_numpy(zero_copy_only=False)),
+                                crs=4326)
+
+    div = load("division", ["id", "names", "subtype", "class", "population", "wikidata", "region", "geometry"], cache_div)
+    areas = load("division_area", ["id", "division_id", "subtype", "class", "names", "geometry"], cache_area)
+    return div[div["name"].isin(names)], areas

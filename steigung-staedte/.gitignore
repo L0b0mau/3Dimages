@@ -5,3 +5,4 @@ __pycache__/
 logs/
 logs_full_run.txt
 run.pid
+logs_at_run.txt

@@ -1,5 +1,7 @@
 # Steigungsatlas deutscher Großstädte
 
+Plus die neun österreichischen Landeshauptstädte als Vergleich.
+
 Welche deutschen Großstädte (> 100.000 EW) haben pro Straßenkilometer die meiste bzw. steilste Steigung?
 Pipeline in Python, Ergebnis als CSV/JSON plus eine selbstenthaltene interaktive Seite (`index.html`).
 
@@ -10,7 +12,7 @@ cd steigung-staedte
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 python run_analysis.py --test      # Testlauf: Wuppertal, Münster, Stuttgart
-python run_analysis.py             # alle 85 Städte (~15 min mit 4 Workern, Downloads gecacht)
+python run_analysis.py             # alle 85 DE-Städte + 9 AT-Landeshauptstädte (~15 min mit 4 Workern, Downloads gecacht)
 # dann index.html im Browser öffnen (läuft offline, alle Bibliotheken und Schriften sind eingebettet)
 ```
 
@@ -61,6 +63,32 @@ Flachste Großstadt: **Moers** (5,0 Hm/km), knapp vor Hamm (5,1) und Krefeld (5,
   (49 → 37) haben wenige, aber steile Hanglagen am Stadtrand; Osnabrück (38 → 51), Recklinghausen, Wolfsburg haben flächig sanfte Wellen ohne steile Abschnitte.
 - **Copernicus vs. SRTM**: Spearman ρ = 0,97 über alle Städte. Copernicus liegt fast überall leicht höher (mehr Oberflächenrauschen).
 - **Radnetz („bike“)** ist überall steiler als das Autonetz (Wuppertal 25,4 Hm/km), weil Wald- und Feldwege an Hängen dazukommen.
+
+### Vergleich: österreichische Landeshauptstädte
+
+Gleiche Methode und Datenquellen, kein Rang im deutschen Ranking, aber ein Gesamtrang über alle 94 Städte.
+
+| Gesamtrang | Stadt | Hm/km | Median | > 6 % | > 10 % | > 15 % | Hm/km SRTM | Radnetz Hm/km |
+|--:|---|--:|--:|--:|--:|--:|--:|--:|
+| 6 | Innsbruck | 17,5 | 1,9 % | 20,0 % | 7,9 % | 2,5 % | 17,8 | 32,1 |
+| 10 | Bregenz | 15,9 | 1,8 % | 17,5 % | 6,9 % | 1,7 % | 16,2 | 26,2 |
+| 17 | Graz | 13,7 | 1,4 % | 14,0 % | 5,4 % | 1,3 % | 13,9 | 23,5 |
+| 23 | Eisenstadt | 12,9 | 1,7 % | 9,3 % | 2,9 % | 0,6 % | 12,6 | 18,3 |
+| 27 | Wien | 12,1 | 1,3 % | 10,4 % | 3,2 % | 0,9 % | 11,7 | 15,4 |
+| 28 | Linz | 12,0 | 1,2 % | 11,3 % | 3,6 % | 0,8 % | 12,1 | 17,6 |
+| 32 | Salzburg | 11,7 | 1,3 % | 9,0 % | 4,1 % | 1,1 % | 11,4 | 16,6 |
+| 44 | Klagenfurt | 9,6 | 1,0 % | 7,8 % | 2,1 % | 0,4 % | 10,2 | 18,6 |
+| 86 | St. Pölten | 6,1 | 0,7 % | 2,3 % | 0,6 % | 0,1 % | 7,1 | 9,1 |
+
+**Ist Innsbruck steiler als Wuppertal?** Im Durchschnitt nein: 17,5 gegen 20,8 Hm/km, in beiden Höhenmodellen.
+Innsbruck ist zweigeteilt: Der Talboden im Inntal ist flach (52 % der Straßen-km unter 2 % Steigung, Wuppertal 35 %),
+die Hänge zur Hungerburg, nach Igls und Mühlau sind dafür steiler. Bei den sehr steilen Abschnitten liegt Innsbruck
+vorne (> 15 %: 2,5 % gegen 1,6 %), ebenso im Radnetz (32,1 gegen 25,4 Hm/km), weil dort die Hangwege dazukommen.
+Wuppertal ist flächig hügelig, Innsbruck ist flach mit steilen Rändern.
+
+Die Alpenlage allein macht eine Stadt nicht steil: Salzburg (11,7) und Klagenfurt (9,6) liegen in breiten Becken,
+St. Pölten gehört zu den flachsten Städten im ganzen Vergleich. Gemessen wird das Straßennetz, nicht die Berge
+im Stadtgebiet: Die Nordkette gehört zu Innsbruck, hat aber kaum befahrbare Straßen.
 
 ## Methodik
 

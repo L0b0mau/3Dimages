@@ -114,7 +114,7 @@ def city_payload(city: str, row, crow: dict):
     keys = ["hm_pro_km", "mittl_steigung_pct", "median_steigung_pct", "p90_steigung_pct",
             "anteil_ueber_6pct", "anteil_ueber_10pct", "anteil_ueber_15pct", "strassen_km",
             "drive_srtm_hm_pro_km", "drive_srtm_anteil_ueber_6pct", "ausreisser_n", "einwohner_osm",
-            "rang_hm_pro_km", "rang_anteil_6pct"]
+            "rang_hm_pro_km", "rang_anteil_6pct", "rang_gesamt_hm_pro_km"]
     return {
         "name": city,
         "m": {k: (None if pd.isna(crow.get(k)) else float(crow.get(k))) for k in keys},
@@ -138,22 +138,30 @@ def build_html():
     top = json.loads((config.RESULTS / "top_staedte.json").read_text())
     store = json.loads((config.CACHE / "city_results.json").read_text())
     sel = [r["stadt"] for r in top["top3_hm_pro_km"]] + [top["flachste_grossstadt"]["stadt"]]
+    roles = ["top"] * 3 + ["ref"]
+    # Österreich: steilste Landeshauptstadt, außerdem Innsbruck (Alpenstadt, häufigste Vergleichsfrage)
+    at = [r["stadt"] for r in top.get("oesterreich", [])]
+    for c in ([at[0]] if at else []) + (["Innsbruck"] if "Innsbruck" in at else []):
+        if c not in sel:
+            sel.append(c)
+            roles.append("at")
     payload = []
     for c in sel:
         crow = {**store[c], **df[df.stadt == c].iloc[0].to_dict()}
         log.info("Viz-Export %s", c)
         payload.append(city_payload(c, cities.loc[c], crow))
-    ranking = df[["stadt", "status", "hm_pro_km", "anteil_ueber_6pct", "p90_steigung_pct",
+    ranking = df[["stadt", "land", "status", "hm_pro_km", "anteil_ueber_6pct", "p90_steigung_pct",
                   "mittl_steigung_pct", "drive_srtm_hm_pro_km", "strassen_km", "einwohner_osm"]]
     val = json.loads((config.RESULTS / "validierung.json").read_text()) \
         if (config.RESULTS / "validierung.json").exists() else []
     for v in val:
         v.pop("profil_cop30", None)
     data = {
-        "cities": payload, "featured": sel, "ranking": ranking.round(3).to_dict("records"),
+        "cities": payload, "featured": sel, "roles": roles, "ranking": ranking.round(3).to_dict("records"),
         "bins": config.GRADE_BINS, "meta": {k: top[k] for k in ("stand", "overture_release", "methodik",
                                                                    "bekannte_grenzen", "ranking_vergleich",
-                                                                   "dem_vergleich", "anzahl_staedte")},
+                                                                   "dem_vergleich", "anzahl_staedte",
+                                                                   "anzahl_staedte_at")},
         "validation": val,
     }
     js = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
