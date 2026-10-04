@@ -180,9 +180,17 @@ def build_html():
             .replace("__FONT_MONO_400__", _b64(vendor / "jetbrains-mono-latin-400-normal.woff2"))
             .replace("__FONT_MONO_600__", _b64(vendor / "jetbrains-mono-latin-600-normal.woff2")))
     out = config.ROOT / "index.html"
+    # <title> und <meta description> gehören in den <head> (Suchmaschinen, Link-Vorschauen)
+    head_tags, body = [], html
+    for _ in range(2):
+        body = body.lstrip()
+        if body.startswith(("<title>", "<meta ")):
+            end = body.index("</title>") + 8 if body.startswith("<title>") else body.index(">") + 1
+            head_tags.append(body[:end])
+            body = body[end:]
     out.write_text('<!doctype html>\n<html lang="de">\n<head>\n<meta charset="utf-8">\n'
                    '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-                   '</head>\n<body>\n' + html + '\n</body>\n</html>\n')
+                   + "\n".join(head_tags) + '\n</head>\n<body>\n' + body + '\n</body>\n</html>\n')
     # Variante ohne Dokumentgerüst (für die Veröffentlichung als Artifact)
     (config.CACHE / "index_fragment.html").write_text(html)
     log.info("index.html geschrieben (%.1f MB)", out.stat().st_size / 1e6)
