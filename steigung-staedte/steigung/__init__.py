@@ -1,1 +1,0 @@
-"""Steigungsanalyse deutscher Großstädte."""
